@@ -1,15 +1,23 @@
 import mongoose from "mongoose";
-import { db_name } from '../constaints.js'
+import { database } from '../constaints.js'
+
 
 const dbConfig = async () => {
     try {
-        const dbconnect = await mongoose.connect(`${process.env.MONGO_URI}/${db_name}`);
+        await mongoose.connect(`${process.env.MONGO_URI}/${database}`);
 
-        console.log(dbconnect.connection.host,process.env.MONGO_URI);
+        const db = mongoose.connection
+        db.on('connected', () => {
+            console.log("successfully connected to database");
+        });
+        db.on('error', () => {
+            console.log("error to connecting database");
+        });
+
     } catch (error) {
-        console.log("mongodb connection failed: ", error);
+        console.error("MongoDB connection failed:", error);
         process.exit(1);
     }
-}
+};
 
 export default dbConfig;
