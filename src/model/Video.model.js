@@ -5,15 +5,15 @@ const videoSchema = new Schema({
         type: String,
         require: true
     },
-    videFile: {
+    thumbnail: {
         type: String,
         require: true
     },
-    videFile: {
+    title: {
         type: String,
         require: true
     },
-    videFile: {
+    description: {
         type: String,
         require: true
     },
