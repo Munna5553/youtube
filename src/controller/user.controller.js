@@ -1,8 +1,11 @@
 import User from "../model/User.model.js";
+import jwt from 'jsonwebtoken';
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { ResponseHandler } from "../utils/ResponseHandler.js";
+import { StatusCodes } from '../utils/statusCode.js';
+
 
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -154,6 +157,203 @@ const LogOut = asyncHandler(async (req, res) => {
                     "user logged out successfully!"
                 )
         );
-})
+});
 
-export { registerUser, Login, LogOut }
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    try {
+        const recievedToken = req.cookie.refreshToken || req.body.refreshToken;
+
+        if (!recievedToken) {
+            throw new ErrorHandler(401, "unathorized requist!..");
+        }
+
+        const decodedToken = await jwt.verify(
+            recievedToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+
+        const user = await User.findById(decodedToken?._id)
+
+        if (!user) {
+            throw new ErrorHandler(401, "invalid refresh token!..")
+        }
+
+        if (recievedToken !== user?.refreshToken) {
+            throw new ErrorHandler(401, "refresh token is expired!..");
+        }
+
+        const { refreshToken, accessToken } = await generateAccessAndRefreshToken(user._id);
+
+        return res.status(200)
+            .cookie("refreshToken", refreshToken, option)
+            .cookie("accessToken", accessToken, option).
+            json(
+                new ResponseHandler(
+                    200,
+                    { accessToken, refreshToken },
+                    "access token and refreshToken update successfully!.."
+                )
+            )
+    } catch (error) {
+        throw new ErrorHandler(401, error?.message);
+    }
+
+});
+
+
+const changePassword = asyncHandler(async (req, res) => {
+
+    const { oldPassword, newPassword } = req.body;
+
+    if (!(oldPassword === newPassword)) {
+        throw new ErrorHandler(401, "old password and new password is required!..");
+    }
+
+    const user = await User.findById(req.user?._id);
+
+    const IsPasswordCorrect = await user.IsPasswordCorrect(oldPassword);
+
+    if (!IsPasswordCorrect) {
+        throw new ErrorHandler(400, "invalid old password!");
+    }
+
+    user.password = newPassword
+
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(
+        new ResponseHandler(
+            200,
+            {},
+            "password change successfully!"
+        )
+    )
+
+
+});
+
+const getUser = asyncHandler(async (res, res) => {
+
+    return res.status(200).json(
+        new ResponseHandler(
+            200,
+            req.user,
+            "current user fetched successfully!.."
+        )
+    )
+
+});
+
+
+const updateAccountDetail = asyncHandler(async (res, res) => {
+
+    const { fullname, email } = req.body;
+
+    if (!(fullname && email)) {
+        throw new ErrorHandler(400, "fullname and email is required to update!..");
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullname,
+                email
+            }
+        },
+        { new: true }
+    ).select("-password");
+
+    return res.status(200).json(
+        new ResponseHandler(
+            200,
+            user,
+            "account details updated successfully!.."
+        )
+    )
+
+});
+
+
+const updateAvatar = asyncHandler(async (req, res) => {
+
+    const avatarLocal = req.file?.path;
+
+    if (!avatarLocal) {
+        throw new ErrorHandler(400, "avatar file is misisng!..");
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocal);
+
+    if (!avatar.url) {
+        throw new ErrorHandler(400, "error while uploding avatar!..");
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        },
+        { new: true }
+    ).select("-password");
+
+    return res.status(200).json(
+        new ResponseHandler(
+            200,
+            user,
+            "avatar image updated successfully!.."
+        )
+    );
+
+});
+
+
+const updateCoverImage = asyncHandler(async (req, res) => {
+
+    const coverImageLocal = req.file?.path;
+
+    if (!coverImageLocal) {
+        throw new ErrorHandler(400, "cover image file is misisng!..");
+    }
+
+    const coverImage = await uploadOnCloudinary(coverImageLocal);
+
+    if (!coverImage.url) {
+        throw new ErrorHandler(400, "error while uploding cover image!..");
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                coverImage: coverImage.url
+            }
+        },
+        { new: true }
+    ).select("-password");
+
+    return res.status(200).json(
+        new ResponseHandler(
+            200,
+            user,
+            "coverImage image updated successfully!.."
+        )
+    );
+
+});
+
+
+export {
+    registerUser,
+    Login,
+    LogOut,
+    refreshAccessToken,
+    changePassword,
+    updateAvatar,
+    updateCoverImage,
+    getUser,
+    updateAccountDetail
+};
