@@ -136,8 +136,8 @@ const Login = asyncHandler(async (req, res) => {
 const LogOut = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
         },
         {
@@ -345,7 +345,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 });
 
 
-const getWatchHistory = asyncHandler(async (res, res) => {
+const getWatchHistory = asyncHandler(async (req, res) => {
     const user = User.aggregate([
         {
             $match: {
