@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { database } from '../constaints.js'
+import { database } from '../constaints.js';
 
 
 const dbConfig = async () => {
