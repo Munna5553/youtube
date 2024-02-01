@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { database } from '../constaints.js';
 
-
 const dbConfig = async () => {
     try {
         await mongoose.connect(`${process.env.MONGO_URI}/${database}`);
