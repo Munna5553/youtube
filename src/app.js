@@ -18,9 +18,6 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 //routes
-app.get("/", (req, res) => {
-    res.send("Hello from yt backend!");
-})
 
 import userRouter from './routes/user.routes.js';
 
