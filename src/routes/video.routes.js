@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { publishAVideo } from "../controller/video.controller";
-import { verifyJwt } from "../middleware/auth.middleware";
+import { publishAVideo } from "../controller/video.controller.js";
+import { verifyJwt } from "../middleware/auth.middleware.js";
 
 
 const router = Router();
