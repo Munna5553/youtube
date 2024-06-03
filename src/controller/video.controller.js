@@ -32,7 +32,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
             description,
             videFile: {
                 publicId: uploadedVideo.public_id,
-                url: uploadedVideo.url
+                videoUrl: uploadedVideo.url
             },
             duration: uploadedVideo.duration
         });
