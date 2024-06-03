@@ -46,13 +46,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     let avatarLocal = req.files?.avatar[0]?.path;
 
-    //const coverImageLocal = req.files?.coverImage[0]?.path;
-    let coverImageLocal;
-
-    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.lenght > 0) {
-        coverImageLocal = req.files.coverImage[0].path
-    }
-
+    const coverImageLocal = req.files?.coverImage[0]?.path;
 
     const avatar = await uploadOnCloudinary(avatarLocal)
     const coverImage = await uploadOnCloudinary(coverImageLocal);
@@ -330,6 +324,9 @@ const updateCoverImage = asyncHandler(async (req, res) => {
         throw new ErrorHandler(400, "cover image file is misisng!..");
     }
 
+    const userWithOldCoverImg = await User.findById(req.user?._id)
+    await deleteFromCloudinary(userWithOldCoverImg.coverImage.publicId);
+
     const coverImage = await uploadOnCloudinary(coverImageLocal);
 
     if (!coverImage.url) {
@@ -340,7 +337,10 @@ const updateCoverImage = asyncHandler(async (req, res) => {
         req.user?._id,
         {
             $set: {
-                coverImage: coverImage.url
+                coverImage: {
+                    publicId: coverImage.public_id,
+                    imageUrl: coverImage.url
+                }
             }
         },
         { new: true }
