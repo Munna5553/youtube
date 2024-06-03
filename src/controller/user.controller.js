@@ -1,6 +1,6 @@
 import User from "../model/User.model.js";
 import jwt from 'jsonwebtoken';
-import { uploadOnCloudinary } from "../utils/Cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { ResponseHandler } from "../utils/ResponseHandler.js";
@@ -289,6 +289,9 @@ const updateAvatar = asyncHandler(async (req, res) => {
         throw new ErrorHandler(400, "avatar file is misisng!..");
     }
 
+    const userWithOldAvatar = await User.findById(req.user?._id)
+    await deleteFromCloudinary(userWithOldAvatar.avatar?.publicId);
+
     const avatar = await uploadOnCloudinary(avatarLocal);
 
     if (!avatar.url) {
@@ -299,7 +302,10 @@ const updateAvatar = asyncHandler(async (req, res) => {
         req.user?._id,
         {
             $set: {
-                avatar: avatar.url
+                avatar: {
+                    publicId: avatar.public_id,
+                    imageUrl: avatar.url
+                }
             }
         },
         { new: true }
