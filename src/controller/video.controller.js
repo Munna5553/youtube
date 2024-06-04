@@ -57,12 +57,34 @@ const publishAVideo = asyncHandler(async (req, res) => {
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
     //TODO: get video by id
+    try {
+        const { videoId } = req.params;
+        if (!videoId) {
+            throw new ErrorHandler(400, "video id is not exists");
+        }
+
+        const video = await Video.findById(videoId);
+
+        if (!video) {
+            throw new ErrorHandler(400, "video is not found");
+        }
+
+        return res.status(200).json(
+            new ResponseHandler(
+                200,
+                { data: video },
+                "video founded successfully!"
+            )
+        );
+
+    } catch (error) {
+        throw new ErrorHandler(500, "server is not responding, try again.")
+    }
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.params;
     //TODO: update video details like title, description, thumbnail
 
 })
