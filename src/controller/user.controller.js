@@ -284,7 +284,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
     }
 
     const userWithOldAvatar = await User.findById(req.user?._id)
-    await deleteFromCloudinary(userWithOldAvatar.avatar?.publicId);
+    await deleteFromCloudinary(userWithOldAvatar.avatar?.publicId, "image");
 
     const avatar = await uploadOnCloudinary(avatarLocal);
 
@@ -325,7 +325,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     }
 
     const userWithOldCoverImg = await User.findById(req.user?._id)
-    await deleteFromCloudinary(userWithOldCoverImg.coverImage.publicId);
+    await deleteFromCloudinary(userWithOldCoverImg.coverImage.publicId, "image");
 
     const coverImage = await uploadOnCloudinary(coverImageLocal);
 

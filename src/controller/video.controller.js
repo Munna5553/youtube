@@ -4,7 +4,7 @@ import User from "../model/User.model.js"
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js"
 import { ResponseHandler } from "../utils/ResponseHandler.js";
 import jwt from "jsonwebtoken"
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import Video from "../model/Video.model.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -12,6 +12,18 @@ const getAllVideos = asyncHandler(async (req, res) => {
     try {
         const { page = 1, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query;
 
+        const videos = await Video.find()
+            .sort(sortType)
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+
+        return res.statu(200).json(
+            new ResponseHandler(
+                "Videos fetched successfully",
+                videos,
+                200
+            )
+        )
 
     } catch (error) {
         throw new ErrorHandler(400, "server is busy, try again.");
@@ -41,7 +53,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
                 publicId: uploadedVideo.public_id,
                 videoUrl: uploadedVideo.url
             },
-            duration: uploadedVideo.duration
+            duration: uploadedVideo.duration,
+            owner: req.user?._id
         });
 
         const isVideoUploaded = await Video.findById(String(video._id));
@@ -55,7 +68,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
                 (
                     201,
                     { data: isVideoUploaded },
-                    "user register succcesfully!"
+                    "video uploaded successfully."
                 )
         );
     } catch (error) {
@@ -96,13 +109,19 @@ const updateVideo = asyncHandler(async (req, res) => {
         const { videoId } = req.params;
 
         const { title, description } = req.body;
-        const { thumbnail } = req.file;
+        const { thumbnail, video } = req.file;
 
         if (!(title || description || thumbnail)) {
             throw new ErrorHandler(400, "please provide newer data.")
         }
 
         const thumbnailImg = await uploadOnCloudinary(thumbnail)
+
+        if (video) {
+            const olderVideo = await Video.findById(videoId);
+            await deleteFromCloudinary(olderVideo.videFile?.publicId, "video");
+        }
+        const newerVideo = await uploadOnCloudinary(video)
 
         const vidoe = await Video.findByIdAndUpdate(
             videoId,
@@ -113,6 +132,10 @@ const updateVideo = asyncHandler(async (req, res) => {
                     thumbnail: {
                         public_id: thumbnailImg.public_id,
                         url: thumbnailImg.url
+                    },
+                    videFile: {
+                        publicId: newerVideo.public_id,
+                        videoUrl: newerVideo.url
                     }
                 }
             },
@@ -134,31 +157,22 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
     //TODO: delete video
-    try {
-        const { videoId } = req.params;
+    const { videoId } = req.params;
 
-        if (!videoId) {
-            throw new ErrorHandler(400, "video id is not found")
-        }
-
-        const video = await Video.findByIdAndDelete(videoId);
-        await deleteFromCloudinary(video.videFile.publicId);
-
-        if (!video) {
-            throw new ErrorHandler(400, "unable to delete video.")
-        }
-
-        return res.status(200).json(
-            new ResponseHandler(
-                200,
-                { data: video },
-                "video deleted successfully!"
-            )
-        )
-
-    } catch (error) {
-        throw new ErrorHandler(500, "server is busy, unbale to delete video.")
+    if (!isValidObjectId(videoId)) {
+        throw new ErrorHandler(400, "invalide video id.")
     }
+
+    const video = await Video.findByIdAndDelete(videoId);
+    await deleteFromCloudinary(video.videFile?.publicId, "video");
+
+    return res.status(200).json(
+        new ResponseHandler(
+            200,
+            {},
+            "video deleted successfully 👍"
+        )
+    )
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
@@ -175,9 +189,13 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
             { new: true }
         )
 
-        if (!video) {
-            throw new ErrorHandler(400, "unable to changes publish status")
-        }
+        return res.status(200).json(
+            new ResponseHandler(
+                200,
+                { data: video },
+                `video ${req.body.isPublished ? "published" : "unpublished"} successfully!`,
+            )
+        )
     } catch (error) {
         throw new ErrorHandler(500, "server is not responding, while changing publish status")
     }
